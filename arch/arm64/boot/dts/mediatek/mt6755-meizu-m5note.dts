@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: GPL-2.0
 /dts-v1/;
 
+#include <dt-bindings/interrupt-controller/arm-gic.h>
+#include <dt-bindings/interrupt-controller/irq.h>
 #include "mt6755.dtsi"
 
 / {
@@ -85,4 +87,54 @@
 
 &uart0 {
 	status = "okay";
+};
+
+/* eMMC (msdc0): LK уже инициализировал контроллер, такты берём фиксированные */
+/ {
+	msdc0_src: clock-msdc0-src {
+		compatible = "fixed-clock";
+		#clock-cells = <0>;
+		clock-frequency = <400000000>;
+	};
+
+	msdc0_hclk: clock-msdc0-hclk {
+		compatible = "fixed-clock";
+		#clock-cells = <0>;
+		clock-frequency = <26000000>;
+	};
+
+	mmc0: mmc@11230000 {
+		compatible = "mediatek,mt8173-mmc";
+		reg = <0x0 0x11230000 0x0 0x1000>;
+		interrupts = <GIC_SPI 79 IRQ_TYPE_LEVEL_LOW>;
+		clocks = <&msdc0_src>, <&msdc0_hclk>;
+		clock-names = "source", "hclk";
+		pinctrl-names = "default", "state_uhs";
+		pinctrl-0 = <>;
+		pinctrl-1 = <>;
+		bus-width = <8>;
+		max-frequency = <50000000>;
+		cap-mmc-highspeed;
+		non-removable;
+		no-sd;
+		no-sdio;
+		status = "okay";
+	};
+};
+
+
+/* питание eMMC: LK его уже включил, ядру только сообщаем напряжение */
+/ {
+	reg_emmc_3v3: regulator-emmc-3v3 {
+		compatible = "regulator-fixed";
+		regulator-name = "emmc_vcc_3v3";
+		regulator-min-microvolt = <3300000>;
+		regulator-max-microvolt = <3300000>;
+		regulator-always-on;
+		regulator-boot-on;
+	};
+};
+
+&mmc0 {
+	vmmc-supply = <&reg_emmc_3v3>;
 };
