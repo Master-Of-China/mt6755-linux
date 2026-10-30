@@ -1,0 +1,88 @@
+// SPDX-License-Identifier: GPL-2.0
+/dts-v1/;
+
+#include "mt6755.dtsi"
+
+/ {
+	/* LK принудительно заменяет /model */
+	model = "Meizu M5 Note";
+	compatible = "meizu,m5note", "mediatek,mt6755";
+
+	aliases {
+		serial0 = &uart0;
+	};
+
+	chosen {
+		stdout-path = "framebuffer0";
+
+		/* значения сняты с живого Android: fb_base 0x7e800000, stride 4352 */
+		framebuffer0: framebuffer@9e420000 {
+			compatible = "simple-framebuffer";
+			reg = <0x0 0x9e420000 0x0 0x7f8000>;
+			width = <1080>;
+			height = <1920>;
+			stride = <((1080 + 8) * 4)>;
+			format = "a8r8g8b8";
+		};
+	};
+
+	/* /reserved-memory должен существовать, иначе LK недоволен */
+	reserved-memory {
+		#address-cells = <2>;
+		#size-cells = <2>;
+		ranges;
+
+		/* то же, что LK резервирует в cmdline (mrdump) и в стоковом DTB (ATF) */
+		atf@44600000 {
+			reg = <0x0 0x44600000 0x0 0x40000>;
+			no-map;
+		};
+		mrdump1@44000000 {
+			reg = <0x0 0x44000000 0x0 0x200000>;
+			no-map;
+		};
+		mrdump2@44800000 {
+			reg = <0x0 0x44800000 0x0 0xe0000>;
+			no-map;
+		};
+		mrdump3@46000000 {
+			reg = <0x0 0x46000000 0x0 0x400000>;
+			no-map;
+		};
+
+		ccci-md1 {
+			no-map;
+			size = <0x00 0xa100000>;
+			alignment = <0x00 0x2000000>;
+			alloc-ranges = <0x00 0x40000000 0x00 0xc0000000>;
+		};
+		ccci-share {
+			no-map;
+			size = <0x00 0x600000>;
+			alignment = <0x00 0x4000000>;
+			alloc-ranges = <0x00 0x40000000 0x00 0xc0000000>;
+		};
+		spm {
+			no-map;
+			size = <0x00 0x20000>;
+			alignment = <0x00 0x10000>;
+			alloc-ranges = <0x00 0x40000000 0x00 0x60000000>;
+		};
+		consys {
+			no-map;
+			size = <0x00 0x100000>;
+			alignment = <0x00 0x200000>;
+			alloc-ranges = <0x00 0x40000000 0x00 0x60000000>;
+		};
+	};
+
+	/* заглушка: LK сам подставляет реальные диапазоны памяти */
+	memory@40000000 {
+		device_type = "memory";
+		reg = <0x0 0x40000000 0x0 0xc0000000>;
+	};
+};
+
+&uart0 {
+	status = "okay";
+};
