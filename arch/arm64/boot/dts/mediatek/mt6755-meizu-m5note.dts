@@ -3,6 +3,7 @@
 
 #include <dt-bindings/interrupt-controller/arm-gic.h>
 #include <dt-bindings/interrupt-controller/irq.h>
+#include <dt-bindings/phy/phy.h>
 #include "mt6755.dtsi"
 
 / {
@@ -137,4 +138,53 @@
 
 &mmc0 {
 	vmmc-supply = <&reg_emmc_3v3>;
+};
+
+/* USB (SSUSB/mtu3) только в режиме устройства; такты и питание: LK уже включил */
+/ {
+	usb_clk26m: clock-usb-26m {
+		compatible = "fixed-clock";
+		#clock-cells = <0>;
+		clock-frequency = <26000000>;
+	};
+
+	reg_usb_3v3: regulator-usb-3v3 {
+		compatible = "regulator-fixed";
+		regulator-name = "usb_avdd33";
+		regulator-min-microvolt = <3300000>;
+		regulator-max-microvolt = <3300000>;
+		regulator-always-on;
+		regulator-boot-on;
+	};
+
+	u3phy: t-phy@11290000 {
+		compatible = "mediatek,generic-tphy-v1";
+		reg = <0x0 0x11290000 0x0 0x800>;
+		#address-cells = <2>;
+		#size-cells = <2>;
+		ranges;
+		status = "okay";
+
+		u2port0: usb-phy@11290800 {
+			reg = <0x0 0x11290800 0x0 0x100>;
+			clocks = <&usb_clk26m>;
+			clock-names = "ref";
+			#phy-cells = <1>;
+			status = "okay";
+		};
+	};
+
+	usb_dev: usb@11271000 {
+		compatible = "mediatek,mt8173-mtu3";
+		reg = <0x0 0x11271000 0x0 0x3000>, <0x0 0x11280700 0x0 0x100>;
+		reg-names = "mac", "ippc";
+		interrupts = <GIC_SPI 72 IRQ_TYPE_LEVEL_LOW>;
+		phys = <&u2port0 PHY_TYPE_USB2>;
+		clocks = <&usb_clk26m>, <&usb_clk26m>;
+		clock-names = "sys_ck", "ref_ck";
+		vusb33-supply = <&reg_usb_3v3>;
+		dr_mode = "peripheral";
+		maximum-speed = "high-speed";
+		status = "okay";
+	};
 };
