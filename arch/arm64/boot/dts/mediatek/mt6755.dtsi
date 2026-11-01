@@ -138,6 +138,11 @@
 		compatible = "mediatek,mt6755-wdt",
 		             "mediatek,mt6589-wdt";
 		reg = <0 0x10007000 0 0x100>;
+
+		timeout-sec = <20>;
+		#reset-cells = <1>;
+        /* Включает аппаратную генерацию сигнала сброса наружу к PMIC */
+		mediatek,sysreset; 
 	};
 
 	uart0: serial@11002000 {
