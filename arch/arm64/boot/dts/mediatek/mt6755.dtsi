@@ -142,7 +142,7 @@
 		timeout-sec = <20>;
 		#reset-cells = <1>;
         /* Включает аппаратную генерацию сигнала сброса наружу к PMIC */
-		mediatek,sysreset; 
+		mediatek,sysreset;
 	};
 
 	uart0: serial@11002000 {

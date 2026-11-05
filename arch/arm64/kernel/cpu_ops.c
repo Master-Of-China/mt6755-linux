@@ -38,6 +38,11 @@ static const struct cpu_operations *const acpi_supported_cpu_ops[] __initconst =
 
 static const struct cpu_operations * __init cpu_get_ops(const char *name)
 {
+	/* MT6755: LK rewrites enable-method to spin-table, but the cores need PSCI CPU_ON */
+	if (name && !strcmp(name, "spin-table") && of_machine_is_compatible("mediatek,mt6755")) {
+		pr_info_once("MT6755: forcing PSCI instead of spin-table\n");
+		name = "psci";
+	}
 	const struct cpu_operations *const *ops;
 
 	ops = acpi_disabled ? dt_supported_cpu_ops : acpi_supported_cpu_ops;
