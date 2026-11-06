@@ -148,8 +148,56 @@ out:
 		pr_info("mt6755: CPU%u powered up through SPM\n", cpu);
 	return ret;
 }
+static int mt6755_smp_power_off(unsigned int cpu)
+{
+	unsigned long flags;
+	u32 v, pc, l1, bit;
+	int ret = 0;
+
+	if (!mt6755_present() || !mt6755_spm || cpu >= ARRAY_SIZE(mt6755_cpu_pwr) ||
+	    !mt6755_cpu_pwr[cpu].pwr_con)
+		return 0;
+
+	pc = mt6755_cpu_pwr[cpu].pwr_con;
+	l1 = mt6755_cpu_pwr[cpu].l1pdn;
+	bit = BIT(mt6755_cpu_pwr[cpu].st_bit);
+
+	/* the stock kernel waits for the core to report WFI: SPM+0x174, bit 10 + cpu */
+	if (readl_relaxed_poll_timeout(mt6755_spm + 0x174, v, v & BIT(10 + cpu), 100, 1000000)) {
+		pr_warn("mt6755: CPU%u did not reach WFI, not powering it down\n", cpu);
+		return -ETIMEDOUT;
+	}
+
+	spin_lock_irqsave(&mt6755_spm_lock, flags);
+	writel_relaxed(0x0b160001, mt6755_spm);
+	dsb(sy);
+	mt6755_rmw(pc, 0, BIT(1));	/* ISO on */
+	mt6755_rmw(pc, 0, BIT(5));	/* SRAM_CKISO on */
+	mt6755_rmw(pc, BIT(6), 0);	/* SRAM_ISOINT_B off */
+	mt6755_rmw(l1, 0, BIT(0));	/* L1 power-down on */
+	if (readl_relaxed_poll_timeout_atomic(mt6755_spm + l1, v, v & BIT(8), 10, 1000000)) {
+		pr_err("mt6755: CPU%u L1 power-down ack timeout\n", cpu);
+		ret = -ETIMEDOUT;
+		goto out;
+	}
+	mt6755_rmw(pc, BIT(0), 0);	/* RST_B off */
+	mt6755_rmw(pc, 0, BIT(4));	/* CLK_DIS on */
+	mt6755_rmw(pc, BIT(2), 0);	/* PWR_ON off */
+	mt6755_rmw(pc, BIT(3), 0);	/* PWR_ON_2ND off */
+	if (readl_relaxed_poll_timeout_atomic(mt6755_spm + MT6755_SPM_ST1, v, !(v & bit), 10, 1000000) ||
+	    readl_relaxed_poll_timeout_atomic(mt6755_spm + MT6755_SPM_ST2, v, !(v & bit), 10, 1000000)) {
+		pr_err("mt6755: CPU%u domain did not power down\n", cpu);
+		ret = -ETIMEDOUT;
+	}
+out:
+	spin_unlock_irqrestore(&mt6755_spm_lock, flags);
+	if (!ret)
+		pr_info("mt6755: CPU%u powered down through SPM\n", cpu);
+	return ret;
+}
 #else
 static inline int mt6755_smp_power_on(unsigned int cpu) { return 0; }
+static inline int mt6755_smp_power_off(unsigned int cpu) { return 0; }
 #endif
 
 static int cpu_psci_cpu_boot(unsigned int cpu)
@@ -228,6 +276,17 @@ static int cpu_psci_cpu_kill(unsigned int cpu)
 }
 #endif
 
+#ifdef CONFIG_HOTPLUG_CPU
+static int mt6755_cpu_kill(unsigned int cpu)
+{
+	int err = cpu_psci_cpu_kill(cpu);
+
+	if (!err)
+		mt6755_smp_power_off(cpu);
+	return err;
+}
+#endif
+
 const struct cpu_operations cpu_psci_ops = {
 	.name		= "psci",
 	.cpu_init	= cpu_psci_cpu_init,
@@ -237,7 +296,7 @@ const struct cpu_operations cpu_psci_ops = {
 	.cpu_can_disable = cpu_psci_cpu_can_disable,
 	.cpu_disable	= cpu_psci_cpu_disable,
 	.cpu_die	= cpu_psci_cpu_die,
-	.cpu_kill	= cpu_psci_cpu_kill,
+	.cpu_kill	= mt6755_cpu_kill,
 #endif
 };
 
