@@ -2318,6 +2318,24 @@ static const struct pmic_wrapper_type pwrap_mt6795 = {
 	.init_soc_specific = pwrap_mt6795_init_soc_specific,
 };
 
+/*
+ * MT6755: same register layout as MT6797 (checked by reading the arbiter
+ * and init registers on a running phone), but the bootloader has already
+ * initialised the bus and there is no reset line or DCM clock to control.
+ */
+static const struct pmic_wrapper_type pwrap_mt6755 = {
+	.regs = mt6797_regs,
+	.type = PWRAP_MT6797,
+	.arb_en_all = 0x01fff,
+	.int_en_all = 0,
+	.int1_en_all = 0,
+	.spi_w = PWRAP_MAN_CMD_SPI_WRITE,
+	.wdt_src = PWRAP_WDT_SRC_MASK_ALL,
+	.caps = 0,
+	.init_reg_clock = pwrap_common_init_reg_clock,
+	.init_soc_specific = NULL,
+};
+
 static const struct pmic_wrapper_type pwrap_mt6797 = {
 	.regs = mt6797_regs,
 	.type = PWRAP_MT6797,
@@ -2452,6 +2470,7 @@ static const struct of_device_id of_pwrap_match_tbl[] = {
 	{ .compatible = "mediatek,mt6765-pwrap", .data = &pwrap_mt6765 },
 	{ .compatible = "mediatek,mt6779-pwrap", .data = &pwrap_mt6779 },
 	{ .compatible = "mediatek,mt6795-pwrap", .data = &pwrap_mt6795 },
+	{ .compatible = "mediatek,mt6755-pwrap", .data = &pwrap_mt6755 },
 	{ .compatible = "mediatek,mt6797-pwrap", .data = &pwrap_mt6797 },
 	{ .compatible = "mediatek,mt6873-pwrap", .data = &pwrap_mt6873 },
 	{ .compatible = "mediatek,mt7622-pwrap", .data = &pwrap_mt7622 },
