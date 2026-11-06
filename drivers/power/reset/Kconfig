@@ -311,4 +311,11 @@ config POWER_MLXBF
 	help
 	  This driver supports reset or low power mode handling for Mellanox BlueField.
 
+config POWER_RESET_MT6351
+	bool "MediaTek MT6351 PMIC power-off driver"
+	depends on OF && (ARCH_MEDIATEK || COMPILE_TEST)
+	help
+	  Power off through the RTC block of the MT6351 PMIC, as the vendor
+	  kernel does on MT6755 phones.
+
 endif
