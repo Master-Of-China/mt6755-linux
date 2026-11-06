@@ -134,6 +134,29 @@
 		      <0 0x10236000 0 0x2000>;
 	};
 
+	pwrap_clk: dummy-pwrap-clk {
+		compatible = "fixed-clock";
+		clock-frequency = <26000000>;
+		#clock-cells = <0>;
+	};
+
+	pwrap: pwrap@1000d000 {
+		compatible = "mediatek,mt6755-pwrap";
+		reg = <0 0x1000d000 0 0x1000>;
+		reg-names = "pwrap";
+		interrupts = <GIC_SPI 163 IRQ_TYPE_LEVEL_HIGH>;
+		clocks = <&pwrap_clk>, <&pwrap_clk>;
+		clock-names = "spi", "wrap";
+
+		pmic {
+			compatible = "mediatek,mt6351";
+		};
+
+		poweroff {
+			compatible = "mediatek,mt6351-poweroff";
+		};
+	};
+
 	watchdog@10007000 {
 		compatible = "mediatek,mt6755-wdt",
 		             "mediatek,mt6589-wdt";
