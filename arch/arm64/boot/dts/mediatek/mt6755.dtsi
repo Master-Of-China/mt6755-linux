@@ -8,6 +8,40 @@
 #include <dt-bindings/interrupt-controller/arm-gic.h>
 
 / {
+	infracfg: syscon@10001000 {
+		compatible = "mediatek,mt6755-infracfg", "syscon";
+		reg = <0 0x10001000 0 0x1000>;
+	};
+
+	scpsys: syscon@10006000 {
+		compatible = "mediatek,mt6755-scpsys", "syscon", "simple-mfd";
+		reg = <0 0x10006000 0 0x1000>;
+
+		spm: power-controller {
+			compatible = "mediatek,mt6755-power-controller";
+			#address-cells = <1>;
+			#size-cells = <0>;
+			#power-domain-cells = <1>;
+
+			power-domain@0 {
+				reg = <0>;
+				#power-domain-cells = <1>;
+				#address-cells = <1>;
+				#size-cells = <0>;
+
+				power-domain@1 {
+					reg = <1>;
+					mediatek,infracfg = <&infracfg>;
+					#power-domain-cells = <0>;
+				};
+			};
+		};
+	};
+};
+
+/ {
+
+
 	compatible = "mediatek,mt6755";
 	interrupt-parent = <&sysirq>;
 	#address-cells = <2>;
@@ -134,28 +168,36 @@
 		      <0 0x10236000 0 0x2000>;
 	};
 
-	pwrap_clk: dummy-pwrap-clk {
-		compatible = "fixed-clock";
-		clock-frequency = <26000000>;
-		#clock-cells = <0>;
-	};
+pwrap_clk: dummy-pwrap-clk {
+    compatible = "fixed-clock";
+    clock-frequency = <26000000>;
+    #clock-cells = <0>;
+};
 
-	pwrap: pwrap@1000d000 {
-		compatible = "mediatek,mt6755-pwrap";
-		reg = <0 0x1000d000 0 0x1000>;
-		reg-names = "pwrap";
-		interrupts = <GIC_SPI 163 IRQ_TYPE_LEVEL_HIGH>;
-		clocks = <&pwrap_clk>, <&pwrap_clk>;
-		clock-names = "spi", "wrap";
+pwrap: pwrap@1000d000 {
+    compatible = "mediatek,mt6755-pwrap";
+    reg = <0 0x1000d000 0 0x1000>;
+    reg-names = "pwrap";
+    interrupts = <GIC_SPI 163 IRQ_TYPE_LEVEL_HIGH>;
+    clocks = <&pwrap_clk>, <&pwrap_clk>;
+    clock-names = "spi", "wrap";
 
-		pmic {
-			compatible = "mediatek,mt6351";
+    pmic: mt6351 {
+        compatible = "mediatek,mt6351", "mediatek,mt6353-pmic";
+        interrupt-parent = <&gic>;
+		interrupts = <GIC_SPI 150 IRQ_TYPE_LEVEL_HIGH>;
+        interrupt-controller;
+        #interrupt-cells = <2>;
+
+		mt6351_battery: battery {
+			compatible = "mediatek,mt6351-battery";
 		};
+    };
 
-		poweroff {
-			compatible = "mediatek,mt6351-poweroff";
-		};
-	};
+    poweroff {
+        compatible = "mediatek,mt6351-poweroff";
+    };
+};
 
 	watchdog@10007000 {
 		compatible = "mediatek,mt6755-wdt",

@@ -1,10 +1,34 @@
 // SPDX-License-Identifier: GPL-2.0
 /dts-v1/;
 
+#include <dt-bindings/power/mt6755-power.h>
 #include <dt-bindings/interrupt-controller/arm-gic.h>
 #include <dt-bindings/interrupt-controller/irq.h>
 #include <dt-bindings/phy/phy.h>
 #include "mt6755.dtsi"
+#include "mt6755-pinfunc.h"
+
+
+/ {
+   	gpu_clk: clock-gpu {
+   		compatible = "fixed-clock";
+   		#clock-cells = <0>;
+   		clock-frequency = <520000000>;
+   	};
+
+   	gpu: gpu@13040000 {
+		power-domains = <&spm MT6755_POWER_DOMAIN_MFG>;
+   		compatible = "arm,mali-t860";
+   		reg = <0x0 0x13040000 0x0 0x4000>;
+   		interrupts = <GIC_SPI 216 IRQ_TYPE_LEVEL_LOW>,
+   			     <GIC_SPI 217 IRQ_TYPE_LEVEL_LOW>,
+   			     <GIC_SPI 218 IRQ_TYPE_LEVEL_LOW>;
+   		interrupt-names = "gpu", "mmu", "job";
+   		clocks = <&gpu_clk>;
+   		status = "okay";
+   	};
+   };
+
 
 / {
 	/* LK принудительно заменяет /model */
@@ -187,4 +211,135 @@
 		maximum-speed = "high-speed";
 		status = "okay";
 	};
+
 };
+
+/ {
+	/* Узел батареи — ОБЯЗАТЕЛЬНО с нужными свойствами */
+	battery: battery {
+		compatible = "simple-battery";
+
+		/* Напряжение батареи */
+		voltage-min-design-microvolt = <3300000>;  /* 3.3V минимальное */
+		voltage-max-design-microvolt = <4352000>;  /* 4.352V максимальное */
+
+		/* Ток заряда */
+		constant-charge-current-max-microamp = <2000000>;   /* 2000mA */
+		charge-term-current-microamp = <128000>;            /* 128mA */
+
+		/* Ёмкость (опционально, но желательно) */
+		/*charge-full-design-microamp-hours = <3000000>;      /* 3000mAh */
+	};
+};
+
+
+
+
+/* I2C1: the charger (bq25890 at 0x6b) and sensors live here. LK has set the clocks up */
+/* === ВСТАВИТЬ В КОНЕЦ mt6755-meizu-m5note.dts === */
+/ {
+	aliases {
+		i2c0 = &i2c0;
+		i2c1 = &i2c1;
+		i2c2 = &i2c2;
+	};
+
+	/* Фиктивные часы */
+	i2c_main_clk: i2c-main-clk {
+		compatible = "fixed-clock";
+		#clock-cells = <0>;
+		clock-frequency = <26000000>;
+	};
+
+	i2c_dma_clk: i2c-dma-clk {
+		compatible = "fixed-clock";
+		#clock-cells = <0>;
+		clock-frequency = <26000000>;
+	};
+
+	/* Pinctrl для I2C1 — SDA1/SCL1 */
+	i2c1_pins: i2c1-default {
+		pins_i2c1 {
+			pinmux = <PINMUX_GPIO91__FUNC_SDA1>,
+				 <PINMUX_GPIO94__FUNC_SCL1>;
+			bias-pull-up;
+		};
+	};
+
+	/* I2C0 */
+	i2c0: i2c@11007000 {
+		compatible = "mediatek,mt6755-i2c";
+		cell-index = <0>;
+		reg = <0x0 0x11007000 0x0 0x1000>,
+		      <0x0 0x11000100 0x0 0x80>;
+		interrupts = <GIC_SPI 84 IRQ_TYPE_LEVEL_LOW>;
+		clocks = <&i2c_main_clk>, <&i2c_dma_clk>;
+		clock-names = "main", "dma";
+		clock-div = <10>;
+		clock-frequency = <100000>;
+		#address-cells = <1>;
+		#size-cells = <0>;
+		status = "okay";
+	};
+
+	/* I2C1 — здесь bq25890 */
+	i2c1: i2c@11008000 {
+		compatible = "mediatek,mt6755-i2c";
+		cell-index = <1>;
+		reg = <0x0 0x11008000 0x0 0x1000>,
+		      <0x0 0x11000180 0x0 0x80>;
+		interrupts = <GIC_SPI 85 IRQ_TYPE_LEVEL_LOW>;
+		clocks = <&i2c_main_clk>, <&i2c_dma_clk>;
+		clock-names = "main", "dma";
+		clock-div = <10>;
+		clock-frequency = <100000>;
+		//pinctrl-names = "default";
+		//pinctrl-0 = <&i2c1_pins>;
+		#address-cells = <1>;
+		#size-cells = <0>;
+		status = "okay";
+		charger@6b {
+		compatible = "ti,bq25890";
+		reg = <0x6b>;
+
+		/* Ссылка на узел батареи */
+		monitored-battery = <&battery>;
+
+		/* ОБЯЗАТЕЛЬНЫЕ свойства для mainline драйвера */
+		ti,charge-current = <2000000>;              /* 2000mA ток заряда */
+		ti,battery-regulation-voltage = <4352000>;  /* 4.352V напряжение заряда */
+		ti,minimum-sys-voltage = <3500000>;         /* 3.5V минимальное системное */
+		ti,precharge-current = <128000>;            /* 128mA предварительный заряд */
+		ti,termination-current = <128000>;          /* 128mA ток завершения */
+
+		/* НОВЫЕ обязательные свойства для OTG boost */
+		ti,boost-voltage = <4998000>;               /* 4.998V напряжение boost */
+		ti,boost-max-current = <500000>;            /* 500mA максимальный ток boost */
+
+		/* Опциональные свойства */
+		ti,thermal-regulation-threshold = <120>;    /* 120°C порог терморегуляции */
+
+		/* Если нет OTG (только microUSB на вход), можно отключить boost */
+		/* ti,use-ilim-pin; */  /* Раскомментируй, если используешь ILIM pin */
+	};
+
+	};
+
+	/* I2C2 */
+	i2c2: i2c@11009000 {
+		compatible = "mediatek,mt6755-i2c";
+		cell-index = <2>;
+		reg = <0x0 0x11009000 0x0 0x1000>,
+		      <0x0 0x11000200 0x0 0x80>;
+		interrupts = <GIC_SPI 86 IRQ_TYPE_LEVEL_LOW>;
+		clocks = <&i2c_main_clk>, <&i2c_dma_clk>;
+		clock-names = "main", "dma";
+		clock-div = <10>;
+		clock-frequency = <100000>;
+		#address-cells = <1>;
+		#size-cells = <0>;
+		status = "okay";
+	};
+};
+
+
