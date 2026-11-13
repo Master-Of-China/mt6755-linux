@@ -106,6 +106,7 @@ struct scpsys_domain_data {
 struct scpsys_soc_data {
 	const struct scpsys_domain_data *domains_data;
 	int num_domains;
+	u32 spm_poweron_cfg;	/* if nonzero, written to SPM+0x000 at probe */
 };
 
 #endif /* __SOC_MEDIATEK_MTK_PM_DOMAINS_H */

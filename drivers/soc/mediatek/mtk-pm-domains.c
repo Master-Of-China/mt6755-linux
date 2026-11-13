@@ -24,6 +24,7 @@
 #include "mt8188-pm-domains.h"
 #include "mt8192-pm-domains.h"
 #include "mt8195-pm-domains.h"
+#include "mt6755-pm-domains.h"
 
 #define MTK_POLL_DELAY_US		10
 #define MTK_POLL_TIMEOUT		USEC_PER_SEC
@@ -600,6 +601,10 @@ static const struct of_device_id scpsys_of_match[] = {
 		.compatible = "mediatek,mt8195-power-controller",
 		.data = &mt8195_scpsys_data,
 	},
+	{
+		.compatible = "mediatek,mt6755-power-controller",
+		.data = &mt6755_scpsys_data,
+	},
 	{ }
 };
 
@@ -640,6 +645,9 @@ static int scpsys_probe(struct platform_device *pdev)
 		dev_err(dev, "no regmap available\n");
 		return PTR_ERR(scpsys->base);
 	}
+
+	if (soc->spm_poweron_cfg)
+		regmap_write(scpsys->base, 0x000, soc->spm_poweron_cfg);
 
 	ret = -ENODEV;
 	for_each_available_child_of_node(np, node) {
