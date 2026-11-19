@@ -951,4 +951,17 @@ config CHARGER_QCOM_SMB2
 	  adds support for the SMB2 switch mode battery charger found
 	  in PMI8998 and related PMICs.
 
+config BATTERY_MW3790_BIF
+	tristate "MW3790 battery fuel gauge via BIF"
+	depends on MFD_MT6397 || COMPILE_TEST
+	help
+	  Say Y here to enable support for MW3790 battery fuel gauge
+	  connected via BIF (Battery Interface) to MediaTek MT6351 PMIC.
+
+config BATTERY_MT6351
+	tristate "MT6351 battery via AUXADC"
+	depends on MFD_MT6397
+	help
+	  Battery voltage via MT6351 internal AUXADC.
+
 endif # POWER_SUPPLY
