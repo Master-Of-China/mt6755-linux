@@ -200,7 +200,9 @@ static int mt6351_read_vbat(struct mt6351_bat *bat, int *mv)
     /* (raw * 3 * 1800) / 32768 — без /2: BY_AP-канал 15-бит, RDY уже отрезан маской */
     *mv = (raw * R_VAL_TEMP_CH0 * VOLTAGE_FULL_RANGE) / 32768;
 
-    dev_info(bat->dev, "AUXADC raw=%d voltage=%d mV\n", raw, *mv);
+    /* Отладка на каждый опрос (~10 с) — забивает dmesg. Включить при нужде.
+     * dev_info(bat->dev, "AUXADC raw=%d voltage=%d mV\n", raw, *mv);
+     */
     return 0;
 }
 
