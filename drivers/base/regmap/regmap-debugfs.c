@@ -6,6 +6,10 @@
 //
 // Author: Mark Brown <broonie@opensource.wolfsonmicro.com>
 
+/* M5NOTE: enable writes through the debugfs "registers" file - needed for
+ * MT6351 PMIC AUXADC channel probing (ISENSE) from userspace. */
+#define REGMAP_ALLOW_WRITE_DEBUGFS
+
 #include <linux/slab.h>
 #include <linux/mutex.h>
 #include <linux/debugfs.h>
@@ -290,7 +294,9 @@ static ssize_t regmap_map_read_file(struct file *file, char __user *user_buf,
 				   count, ppos);
 }
 
-#undef REGMAP_ALLOW_WRITE_DEBUGFS
+/* M5NOTE: was #undef REGMAP_ALLOW_WRITE_DEBUGFS - the define at the top of
+ * this file was being undone here, so the write handler never compiled.
+ * Keep the define active to allow PMIC register writes via debugfs. */
 #ifdef REGMAP_ALLOW_WRITE_DEBUGFS
 /*
  * This can be dangerous especially when we have clients such as
