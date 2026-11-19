@@ -42,6 +42,10 @@
 #define MT6323_PWRC_BASE	0x8000
 #define MT6323_PWRC_SIZE	0x40
 
+#define MT6351_SWCID		0x0202
+//#define MT6351_CID_CODE		0x5110  /* E1 revision */
+#define MT6351_CID		0x51
+
 static const struct resource mt6323_rtc_resources[] = {
 	DEFINE_RES_MEM(MT6323_RTC_BASE, MT6323_RTC_SIZE),
 	DEFINE_RES_IRQ(MT6323_IRQ_STATUS_RTC),
@@ -169,6 +173,24 @@ static const struct mfd_cell mt6331_mt6332_devs[] = {
 	},
 };
 
+static const struct mfd_cell mt6351_devs[] = {
+	{
+		.name = "mt6351-regulator",
+		.of_compatible = "mediatek,mt6351-regulator"
+	}, {
+		.name = "mt6351-rtc",
+		.of_compatible = "mediatek,mt6351-rtc",
+	}, {
+		.name = "mt6351-sound",
+		.of_compatible = "mediatek,mt6351-sound"
+	}, {
+		.name = "mt6351-keys",
+		.of_compatible = "mediatek,mt6351-keys"
+	}, { .name = "mt6351-battery",
+		.of_compatible = "mediatek,mt6351-battery"
+	},
+};
+
 static const struct mfd_cell mt6358_devs[] = {
 	{
 		.name = "mt6358-regulator",
@@ -232,6 +254,21 @@ static const struct mfd_cell mt6397_devs[] = {
 	}
 };
 
+static int mt6351_irq_init(struct mt6397_chip *chip)
+{
+	/*
+	 * MT6351 IRQ controller is not supported yet.
+	 * Do not fail MFD probe: BIF/fuel-gauge can work by polling.
+	 */
+	mutex_init(&chip->irqlock);
+	chip->irq_domain = NULL;
+
+	dev_info(chip->dev,
+			 "MT6351 IRQ domain disabled for now, polling children only\n");
+
+	return 0;
+}
+
 struct chip_data {
 	u32 cid_addr;
 	u32 cid_shift;
@@ -262,6 +299,14 @@ static const struct chip_data mt6331_mt6332_core = {
 	.cells = mt6331_mt6332_devs,
 	.cell_size = ARRAY_SIZE(mt6331_mt6332_devs),
 	.irq_init = mt6397_irq_init,
+};
+
+static const struct chip_data mt6351_core = {
+	.cid_addr = MT6351_SWCID,
+	.cid_shift = 8,
+	.cells = mt6351_devs,
+	.cell_size = ARRAY_SIZE(mt6351_devs),
+	.irq_init = mt6351_irq_init, /* Используем mt6358 как базу */
 };
 
 static const struct chip_data mt6358_core = {
@@ -335,7 +380,9 @@ static int mt6397_probe(struct platform_device *pdev)
 				   pmic_core->cells, pmic_core->cell_size,
 				   NULL, 0, pmic->irq_domain);
 	if (ret) {
-		irq_domain_remove(pmic->irq_domain);
+		if (pmic->irq_domain)
+			irq_domain_remove(pmic->irq_domain);
+
 		dev_err(&pdev->dev, "failed to add child devices: %d\n", ret);
 	}
 
@@ -361,6 +408,12 @@ static const struct of_device_id mt6397_of_match[] = {
 	}, {
 		.compatible = "mediatek,mt6397",
 		.data = &mt6397_core,
+	}, {
+		.compatible = "mediatek,mt6351",
+		.data = &mt6351_core,
+	}, {
+		.compatible = "mediatek,mt6353",  /* Fallback из твоего DTS */
+		.data = &mt6351_core,
 	}, {
 		/* sentinel */
 	}
