@@ -273,7 +273,7 @@
 		clocks = <&i2c_main_clk>, <&i2c_dma_clk>;
 		clock-names = "main", "dma";
 		clock-div = <10>;
-		clock-frequency = <100000>;
+		clock-frequency = <400000>;
 		#address-cells = <1>;
 		#size-cells = <0>;
 		status = "okay";
