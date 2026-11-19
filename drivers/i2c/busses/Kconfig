@@ -1477,5 +1477,12 @@ config I2C_VIRTIO
 
           This driver can also be built as a module. If so, the module
           will be called i2c-virtio.
+config I2C_MT6755_MINIMAL
+	tristate "MediaTek MT6755 minimal I2C adapter"
+	depends on ARCH_MEDIATEK || COMPILE_TEST
+	help
+	  Minimal polling I2C adapter for the MediaTek MT6755 SoC.
+	  No DMA, no interrupts; used to bring up boards where the full
+	  MT65xx driver cannot set up its DMA channel and clocks.
 
 endmenu
