@@ -877,6 +877,13 @@ config REGULATOR_MT6380
 	  This driver supports the control of different power rails of device
 	  through regulator interface.
 
+config REGULATOR_MT6351_MINIMAL
+	tristate "MediaTek MT6351 PMIC, VLDO28 only (M5 Note touch rail)"
+	depends on MFD_MT6397
+	help
+	  Minimal regulator driver for the MT6351 VLDO28 rail, which supplies
+	  the touch panel on the Meizu M5 Note.
+
 config REGULATOR_MT6397
 	tristate "MediaTek MT6397 PMIC"
 	depends on MFD_MT6397
