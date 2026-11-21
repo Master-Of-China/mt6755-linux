@@ -192,6 +192,16 @@ pwrap: pwrap@1000d000 {
 		mt6351_battery: battery {
 			compatible = "mediatek,mt6351-battery";
 		};
+		regulators {
+			compatible = "mediatek,mt6351-regulator";
+
+			mt6351_vldo28: ldo_vldo28 {
+				regulator-name = "vldo28";
+				regulator-min-microvolt = <2800000>;
+				regulator-max-microvolt = <2800000>;
+			};
+		};
+
     };
 
     poweroff {
@@ -209,6 +219,18 @@ pwrap: pwrap@1000d000 {
         /* Включает аппаратную генерацию сигнала сброса наружу к PMIC */
 		mediatek,sysreset;
 	};
+
+	pio: pinctrl@10005000 {
+		compatible = "mediatek,mt6755-pinctrl";
+		reg = <0 0x10005000 0 0x1000>, <0 0x1000b000 0 0x1000>;
+		reg-names = "gpio", "eint";
+		gpio-controller;
+		#gpio-cells = <2>;
+		gpio-ranges = <&pio 0 0 190>;
+		interrupt-controller;
+		#interrupt-cells = <2>;
+		interrupts = <GIC_SPI 155 IRQ_TYPE_LEVEL_HIGH>;
+};
 
 	uart0: serial@11002000 {
 		compatible = "mediatek,mt6755-uart",
