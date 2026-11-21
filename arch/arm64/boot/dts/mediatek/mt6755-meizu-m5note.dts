@@ -9,6 +9,39 @@
 #include "mt6755.dtsi"
 
 
+
+/ {
+	disp_pwm_clk: clock-disp-pwm {
+		compatible = "fixed-clock";
+		#clock-cells = <0>;
+		clock-frequency = <25600000>;	/* nominal, only for the driver's math */
+	};
+
+	disp_pwm_mm_clk: clock-disp-pwm-mm {
+		compatible = "fixed-clock";
+		#clock-cells = <0>;
+		clock-frequency = <25600000>;
+	};
+
+	disp_pwm: pwm@1100e000 {
+		compatible = "mediatek,mt6595-disp-pwm";
+		reg = <0x0 0x1100e000 0x0 0x1000>;
+		#pwm-cells = <2>;
+		clocks = <&disp_pwm_clk>, <&disp_pwm_mm_clk>;
+		clock-names = "main", "mm";
+		status = "okay";
+	};
+
+	backlight: backlight {
+		compatible = "pwm-backlight";
+		pwms = <&disp_pwm 0 40000>;	/* 40000 ns = 1024 steps at the nominal rate */
+		brightness-levels = <0 89 169 249 330 410 519 775 1023>;
+		num-interpolated-steps = <32>;
+		default-brightness-level = <92>;	/* about LK's duty 236 */
+		status = "okay";
+	};
+};
+
 / {
    	gpu_clk: clock-gpu {
    		compatible = "fixed-clock";
