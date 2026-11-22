@@ -661,6 +661,15 @@ static int mtk_dsi_poweron(struct mtk_dsi *dsi)
 		       dsi->regs + DSI_SHADOW_DEBUG);
 
 	mtk_dsi_reset_engine(dsi);
+
+	/*
+	 * mtk_dsi_reset_engine() leaves DSI_MODE_CTRL alone, so a video mode
+	 * left by the bootloader would make the first panel command wait for
+	 * a VM_DONE that never arrives. mtk_dsi_set_mode() programs the real
+	 * mode when the video stream is started.
+	 */
+	mtk_dsi_set_cmd_mode(dsi);
+
 	mtk_dsi_phy_timconfig(dsi);
 
 	mtk_dsi_ps_control_vact(dsi);
