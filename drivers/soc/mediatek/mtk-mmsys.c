@@ -14,6 +14,7 @@
 #include <linux/soc/mediatek/mtk-mmsys.h>
 
 #include "mtk-mmsys.h"
+#include "mt6755-mmsys.h"
 #include "mt8167-mmsys.h"
 #include "mt8173-mmsys.h"
 #include "mt8183-mmsys.h"
@@ -125,6 +126,14 @@ static const struct mtk_mmsys_driver_data mt8365_mmsys_driver_data = {
 	.clk_driver = "clk-mt8365-mm",
 	.routes = mt8365_mmsys_routing_table,
 	.num_routes = ARRAY_SIZE(mt8365_mmsys_routing_table),
+};
+
+static const struct mtk_mmsys_driver_data mt6755_mmsys_driver_data = {
+	.clk_driver = "clk-mt6755-mm",	/* no such driver yet: the device stays unbound, we use fixed-clock stubs */
+	.routes = mt6755_mmsys_routing_table,
+	.num_routes = ARRAY_SIZE(mt6755_mmsys_routing_table),
+	.sw0_rst_offset = MT8183_MMSYS_SW0_RST_B,	/* 0x140, same layout as mt8173/mt6795 (two 32-bit registers) */
+	.num_resets = 64,
 };
 
 struct mtk_mmsys {
@@ -439,6 +448,7 @@ static const struct of_device_id of_match_mtk_mmsys[] = {
 	{ .compatible = "mediatek,mt8195-vppsys0", .data = &mt8195_vppsys0_driver_data },
 	{ .compatible = "mediatek,mt8195-vppsys1", .data = &mt8195_vppsys1_driver_data },
 	{ .compatible = "mediatek,mt8365-mmsys", .data = &mt8365_mmsys_driver_data },
+	{ .compatible = "mediatek,mt6755-mmsys", .data = &mt6755_mmsys_driver_data },
 	{ /* sentinel */ }
 };
 MODULE_DEVICE_TABLE(of, of_match_mtk_mmsys);

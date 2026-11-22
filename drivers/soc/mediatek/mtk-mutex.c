@@ -14,6 +14,19 @@
 #include <linux/soc/mediatek/mtk-mutex.h>
 #include <linux/soc/mediatek/mtk-cmdq.h>
 
+#define MT6755_MUTEX_MOD_DISP_OVL0	7
+#define MT6755_MUTEX_MOD_DISP_RDMA0	9
+#define MT6755_MUTEX_MOD_DISP_COLOR0	12
+#define MT6755_MUTEX_MOD_DISP_CCORR	13
+#define MT6755_MUTEX_MOD_DISP_AAL	14
+#define MT6755_MUTEX_MOD_DISP_GAMMA	15
+#define MT6755_MUTEX_MOD_DISP_DITHER	16
+#define MT6755_MUTEX_MOD_DISP_PWM0	18
+
+#define MT6755_MUTEX_SOF_DSI0		1
+#define MT6755_MUTEX_EOF_DSI0		(MT6755_MUTEX_SOF_DSI0 << 6)	/* SOF register read 0x41 on the phone */
+
+
 #define MTK_MUTEX_MAX_HANDLES			10
 
 #define MT2701_MUTEX0_MOD0			0x2c
@@ -382,6 +395,23 @@ static const unsigned int mt8173_mutex_mod[DDP_COMPONENT_ID_MAX] = {
 	[DDP_COMPONENT_WDMA1] = MT8173_MUTEX_MOD_DISP_WDMA1,
 };
 
+static const unsigned int mt6755_mutex_mod[DDP_COMPONENT_ID_MAX] = {
+	[DDP_COMPONENT_AAL0] = MT6755_MUTEX_MOD_DISP_AAL,
+	[DDP_COMPONENT_CCORR] = MT6755_MUTEX_MOD_DISP_CCORR,
+	[DDP_COMPONENT_COLOR0] = MT6755_MUTEX_MOD_DISP_COLOR0,
+	[DDP_COMPONENT_DITHER0] = MT6755_MUTEX_MOD_DISP_DITHER,
+	[DDP_COMPONENT_GAMMA] = MT6755_MUTEX_MOD_DISP_GAMMA,
+	[DDP_COMPONENT_OVL0] = MT6755_MUTEX_MOD_DISP_OVL0,
+	[DDP_COMPONENT_PWM0] = MT6755_MUTEX_MOD_DISP_PWM0,
+	[DDP_COMPONENT_RDMA0] = MT6755_MUTEX_MOD_DISP_RDMA0,
+};
+
+static const unsigned int mt6755_mutex_sof[DDP_MUTEX_SOF_MAX] = {
+	[MUTEX_SOF_SINGLE_MODE] = MUTEX_SOF_SINGLE_MODE,
+	[MUTEX_SOF_DSI0] = MT6755_MUTEX_SOF_DSI0 | MT6755_MUTEX_EOF_DSI0,
+};
+
+
 static const unsigned int mt8183_mutex_mod[DDP_COMPONENT_ID_MAX] = {
 	[DDP_COMPONENT_AAL0] = MT8183_MUTEX_MOD_DISP_AAL0,
 	[DDP_COMPONENT_CCORR] = MT8183_MUTEX_MOD_DISP_CCORR0,
@@ -654,6 +684,14 @@ static const struct mtk_mutex_data mt8173_mutex_driver_data = {
 	.mutex_sof = mt2712_mutex_sof,
 	.mutex_mod_reg = MT2701_MUTEX0_MOD0,
 	.mutex_sof_reg = MT2701_MUTEX0_SOF0,
+};
+
+static const struct mtk_mutex_data mt6755_mutex_driver_data = {
+	.mutex_mod = mt6755_mutex_mod,
+	.mutex_sof = mt6755_mutex_sof,
+	.mutex_mod_reg = MT2701_MUTEX0_MOD0,
+	.mutex_sof_reg = MT2701_MUTEX0_SOF0,
+	.no_clk = true,		/* the vendor display clock list has no mutex gate */
 };
 
 static const struct mtk_mutex_data mt8183_mutex_driver_data = {
@@ -1043,6 +1081,7 @@ static const struct of_device_id mutex_driver_dt_match[] = {
 	{ .compatible = "mediatek,mt8195-disp-mutex", .data = &mt8195_mutex_driver_data },
 	{ .compatible = "mediatek,mt8195-vpp-mutex",  .data = &mt8195_vpp_mutex_driver_data },
 	{ .compatible = "mediatek,mt8365-disp-mutex", .data = &mt8365_mutex_driver_data },
+	{ .compatible = "mediatek,mt6755-disp-mutex", .data = &mt6755_mutex_driver_data },
 	{ /* sentinel */ },
 };
 MODULE_DEVICE_TABLE(of, mutex_driver_dt_match);

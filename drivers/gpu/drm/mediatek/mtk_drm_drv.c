@@ -132,6 +132,18 @@ static const unsigned int mt8173_mtk_ddp_main[] = {
 	DDP_COMPONENT_PWM0,
 };
 
+static const unsigned int mt6755_mtk_ddp_main[] = {
+	DDP_COMPONENT_OVL0,
+	DDP_COMPONENT_COLOR0,
+	DDP_COMPONENT_CCORR,
+	DDP_COMPONENT_AAL0,
+	DDP_COMPONENT_GAMMA,
+	DDP_COMPONENT_DITHER0,
+	DDP_COMPONENT_RDMA0,
+	DDP_COMPONENT_DSI0,
+	DDP_COMPONENT_PWM0,
+};
+
 static const unsigned int mt8173_mtk_ddp_ext[] = {
 	DDP_COMPONENT_OVL1,
 	DDP_COMPONENT_COLOR1,
@@ -268,6 +280,13 @@ static const struct mtk_mmsys_driver_data mt8173_mmsys_driver_data = {
 	.mmsys_dev_num = 1,
 };
 
+static const struct mtk_mmsys_driver_data mt6755_mmsys_driver_data = {
+	.main_path = mt6755_mtk_ddp_main,
+	.main_len = ARRAY_SIZE(mt6755_mtk_ddp_main),
+	.mmsys_dev_num = 1,
+	.no_iommu = true,
+};
+
 static const struct mtk_mmsys_driver_data mt8183_mmsys_driver_data = {
 	.main_path = mt8183_mtk_ddp_main,
 	.main_len = ARRAY_SIZE(mt8183_mtk_ddp_main),
@@ -335,6 +354,8 @@ static const struct of_device_id mtk_drm_of_ids[] = {
 	  .data = &mt8195_vdosys0_driver_data},
 	{ .compatible = "mediatek,mt8195-vdosys1",
 	  .data = &mt8195_vdosys1_driver_data},
+	{ .compatible = "mediatek,mt6755-mmsys",
+	  .data = &mt6755_mmsys_driver_data},
 	{ }
 };
 MODULE_DEVICE_TABLE(of, mtk_drm_of_ids);
@@ -416,6 +437,7 @@ static int mtk_drm_kms_init(struct drm_device *drm)
 	struct mtk_drm_private *private = drm->dev_private;
 	struct mtk_drm_private *priv_n;
 	struct device *dma_dev = NULL;
+	struct drm_crtc *crtc;
 	int ret, i, j;
 
 	if (drm_firmware_drivers_only())
@@ -490,7 +512,13 @@ static int mtk_drm_kms_init(struct drm_device *drm)
 	}
 
 	/* Use OVL device for all DMA memory allocations */
-	dma_dev = mtk_drm_crtc_dma_dev_get(drm_crtc_from_index(drm, 0));
+	crtc = drm_crtc_from_index(drm, 0);
+	if (!crtc) {
+		ret = -ENODEV;
+		dev_err(drm->dev, "No CRTC created; check display pipeline components\n");
+		goto err_component_unbind;
+	}
+	dma_dev = mtk_drm_crtc_dma_dev_get(crtc);
 	if (!dma_dev) {
 		ret = -ENODEV;
 		dev_err(drm->dev, "Need at least one OVL device\n");
@@ -582,7 +610,7 @@ static int mtk_drm_bind(struct device *dev)
 	struct drm_device *drm;
 	int ret, i;
 
-	if (!iommu_present(&platform_bus_type))
+	if (!private->data->no_iommu && !iommu_present(&platform_bus_type))
 		return -EPROBE_DEFER;
 
 	pdev = of_find_device_by_node(private->mutex_node);

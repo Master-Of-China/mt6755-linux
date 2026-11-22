@@ -1,0 +1,75 @@
+/* SPDX-License-Identifier: GPL-2.0 */
+/*
+ * MT6755 mmsys routing for the primary display path:
+ *   OVL0 -> COLOR0 -> CCORR -> AAL0 -> GAMMA -> DITHER0 -> RDMA0 -> DSI0
+ *
+ * Offsets and select values come from the vendor ddp_path.c tables and match
+ * the registers read on a running Meizu M5 Note (state left by the bootloader):
+ *   0x030 = 1, 0x038 = 1, 0x058 = 1, 0x064 = 1, 0x06c = 2, 0x074 = 0, 0x078 = 0.
+ * COLOR0 -> CCORR -> AAL0 -> GAMMA -> DITHER0 are direct links (no routing registers).
+ * The UFOE stage is bypassed, so DSI0 takes its input from RDMA0.
+ * Field widths (masks) are inferred from the number of vendor options per selector.
+ */
+
+#ifndef __SOC_MEDIATEK_MT6755_MMSYS_H
+#define __SOC_MEDIATEK_MT6755_MMSYS_H
+
+#include <linux/bits.h>
+
+#define MT6755_MMSYS_OVL0_MOUT_EN		0x030
+#define MT6755_MMSYS_DITHER_MOUT_EN		0x038
+#define MT6755_MMSYS_COLOR0_SEL_IN		0x058
+#define MT6755_MMSYS_DSI0_SEL_IN		0x064
+#define MT6755_MMSYS_RDMA0_SOUT_SEL_IN		0x06c
+#define MT6755_MMSYS_OVL0_SOUT_SEL_IN		0x074
+#define MT6755_MMSYS_OVL0_SEL_IN		0x078
+
+/* one-hot output enables */
+#define MT6755_OVL0_MOUT_EN_COLOR0		BIT(0)
+#define MT6755_DITHER_MOUT_EN_RDMA0		BIT(0)
+
+/* input/output selectors: value = index in the vendor option list */
+#define MT6755_COLOR0_SEL_IN_MASK		BIT(0)
+#define MT6755_COLOR0_SEL_IN_OVL0_VIRTUAL	BIT(0)		/* 0 = RDMA0 */
+#define MT6755_DSI0_SEL_IN_MASK			GENMASK(1, 0)
+#define MT6755_DSI0_SEL_IN_RDMA0		1		/* 0 = UFOE, 2 = RDMA1 */
+#define MT6755_RDMA0_SOUT_MASK			GENMASK(1, 0)
+#define MT6755_RDMA0_SOUT_DSI0			2		/* 0 = UFOE, 1 = COLOR0, 3 = DPI */
+#define MT6755_OVL0_SOUT_MASK			BIT(0)
+#define MT6755_OVL0_SOUT_OVL0_VIRTUAL		0		/* 1 = OVL1_2L */
+#define MT6755_OVL0_SEL_IN_MASK			GENMASK(1, 0)
+#define MT6755_OVL0_SEL_IN_OVL0			0		/* 1 = OVL1, 2 = OVL1_2L */
+
+static const struct mtk_mmsys_routes mt6755_mmsys_routing_table[] = {
+	{
+		DDP_COMPONENT_OVL0, DDP_COMPONENT_COLOR0,
+		MT6755_MMSYS_OVL0_SOUT_SEL_IN, MT6755_OVL0_SOUT_MASK,
+		MT6755_OVL0_SOUT_OVL0_VIRTUAL
+	}, {
+		DDP_COMPONENT_OVL0, DDP_COMPONENT_COLOR0,
+		MT6755_MMSYS_OVL0_SEL_IN, MT6755_OVL0_SEL_IN_MASK,
+		MT6755_OVL0_SEL_IN_OVL0
+	}, {
+		DDP_COMPONENT_OVL0, DDP_COMPONENT_COLOR0,
+		MT6755_MMSYS_OVL0_MOUT_EN, MT6755_OVL0_MOUT_EN_COLOR0,
+		MT6755_OVL0_MOUT_EN_COLOR0
+	}, {
+		DDP_COMPONENT_OVL0, DDP_COMPONENT_COLOR0,
+		MT6755_MMSYS_COLOR0_SEL_IN, MT6755_COLOR0_SEL_IN_MASK,
+		MT6755_COLOR0_SEL_IN_OVL0_VIRTUAL
+	}, {
+		DDP_COMPONENT_DITHER0, DDP_COMPONENT_RDMA0,
+		MT6755_MMSYS_DITHER_MOUT_EN, MT6755_DITHER_MOUT_EN_RDMA0,
+		MT6755_DITHER_MOUT_EN_RDMA0
+	}, {
+		DDP_COMPONENT_RDMA0, DDP_COMPONENT_DSI0,
+		MT6755_MMSYS_RDMA0_SOUT_SEL_IN, MT6755_RDMA0_SOUT_MASK,
+		MT6755_RDMA0_SOUT_DSI0
+	}, {
+		DDP_COMPONENT_RDMA0, DDP_COMPONENT_DSI0,
+		MT6755_MMSYS_DSI0_SEL_IN, MT6755_DSI0_SEL_IN_MASK,
+		MT6755_DSI0_SEL_IN_RDMA0
+	},
+};
+
+#endif /* __SOC_MEDIATEK_MT6755_MMSYS_H */

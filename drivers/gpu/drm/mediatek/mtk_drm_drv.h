@@ -33,6 +33,7 @@ struct mtk_mmsys_driver_data {
 	bool shadow_register;
 	unsigned int mmsys_id;
 	unsigned int mmsys_dev_num;
+	bool no_iommu;	/* scan-out uses physical addresses, no IOMMU driver */
 };
 
 struct mtk_drm_private {
