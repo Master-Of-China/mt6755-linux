@@ -1,0 +1,218 @@
+// SPDX-License-Identifier: GPL-2.0
+/*
+ * Display pipeline nodes for the Meizu M5 Note (MT6755). Untested, not compiled.
+ * Include from the board dts after the existing blocks:
+ *     #include "mt6755-meizu-m5note-display.dtsi"
+ *
+ * Bases and SPIs come from the stock DTB (live.dts); gate and routing state was read on the phone.
+ * Clocks are fixed-clock stubs: the bootloader left every gate this path needs open, and the
+ * stock-style "clk_ignore_unused" boot keeps it that way.
+ *
+ * Primary path (all measured): OVL0 -> COLOR0 -> CCORR -> AAL -> GAMMA -> DITHER -> RDMA0 -> DSI0.
+ * All nodes sit at the root next to mmsys, because mtk_drm_probe() walks the siblings of the mmsys parent.
+ * Each node lists its own mt6755 string first, then the closest existing SoC so that the existing
+ * drivers and the component table (mtk_ddp_comp_dt_ids) match.
+ */
+
+#include <dt-bindings/interrupt-controller/arm-gic.h>
+#include <dt-bindings/interrupt-controller/irq.h>
+#include <dt-bindings/gpio/gpio.h>
+
+
+/ {
+	/*
+	 * LCD bias supplies. The bias IC voltage registers (0x00/0x01 = 0x0f) are set by the bootloader
+	 * and keep their value, so only the two enable pins are switched. The voltage values are nominal
+	 * (VSN is the negative rail, written as a magnitude).
+	 */
+	reg_lcd_vsp: regulator-lcd-vsp {
+		compatible = "regulator-fixed";
+		regulator-name = "lcd_vsp";
+		regulator-min-microvolt = <5500000>;
+		regulator-max-microvolt = <5500000>;
+		gpio = <&pio 12 GPIO_ACTIVE_HIGH>;	/* bias ENP */
+		enable-active-high;
+		regulator-boot-on;
+	};
+
+	reg_lcd_vsn: regulator-lcd-vsn {
+		compatible = "regulator-fixed";
+		regulator-name = "lcd_vsn";
+		regulator-min-microvolt = <5500000>;
+		regulator-max-microvolt = <5500000>;
+		gpio = <&pio 7 GPIO_ACTIVE_HIGH>;	/* bias ENN */
+		enable-active-high;
+		regulator-boot-on;
+	};
+
+	/* DISP_PWM clock stubs (replace the two existing stub nodes if you already have them) */
+	pwm_main_clk: clock-pwm-main {
+		compatible = "fixed-clock";
+		#clock-cells = <0>;
+		clock-frequency = <25600000>;
+	};
+
+	pwm_mm_clk: clock-pwm-mm {
+		compatible = "fixed-clock";
+		#clock-cells = <0>;
+		clock-frequency = <25600000>;
+	};
+
+	/*
+	 * DISP_PWM. If this node already exists, only the compatible list changes: the first string
+	 * binds the pwm driver, the second one lets the DRM driver find the block as PWM0.
+	 */
+	disp_pwm: pwm@1100e000 {
+		compatible = "mediatek,mt6595-disp-pwm", "mediatek,mt8173-disp-pwm";
+		reg = <0x0 0x1100e000 0x0 0x1000>;
+		#pwm-cells = <2>;
+		clocks = <&pwm_main_clk>, <&pwm_mm_clk>;
+		clock-names = "main", "mm";
+	};
+
+	/* the panel node refers to this one with: backlight = <&backlight>; */
+	backlight: backlight {
+		compatible = "pwm-backlight";
+		pwms = <&disp_pwm 0 40000>;	/* PWM 0, period 40000 ns */
+		brightness-levels = <0 89 169 249 330 410 519 775 1023>;
+		num-interpolated-steps = <32>;	/* 8 intervals x 32 = brightness 0..256 */
+		default-brightness-level = <92>;
+	};
+};
+
+
+
+/ {
+	disp_clk: clock-disp {
+		compatible = "fixed-clock";
+		#clock-cells = <0>;
+		clock-frequency = <26000000>;	/* rate is not used by these drivers (unverified) */
+	};
+
+	mipi_ref_clk: clock-mipi-ref {
+		compatible = "fixed-clock";
+		#clock-cells = <0>;
+		clock-frequency = <26000000>;
+	};
+
+	mmsys: mmsys@14000000 {
+		compatible = "mediatek,mt6755-mmsys", "syscon";
+		reg = <0x0 0x14000000 0x0 0x1000>;
+		#reset-cells = <1>;
+	};
+
+	disp_mutex: mutex@14014000 {
+		compatible = "mediatek,mt6755-disp-mutex", "mediatek,mt8173-disp-mutex";
+		reg = <0x0 0x14014000 0x0 0x1000>;
+		interrupts = <GIC_SPI 177 IRQ_TYPE_LEVEL_LOW>;
+	};
+
+	ovl0: ovl@14008000 {
+		compatible = "mediatek,mt6755-disp-ovl", "mediatek,mt8173-disp-ovl";
+		reg = <0x0 0x14008000 0x0 0x1000>;
+		interrupts = <GIC_SPI 184 IRQ_TYPE_LEVEL_LOW>;
+		clocks = <&disp_clk>;
+	};
+
+	rdma0: rdma@1400a000 {
+		compatible = "mediatek,mt6755-disp-rdma", "mediatek,mt8173-disp-rdma";
+		reg = <0x0 0x1400a000 0x0 0x1000>;
+		interrupts = <GIC_SPI 186 IRQ_TYPE_LEVEL_LOW>;
+		clocks = <&disp_clk>;
+	};
+
+	color0: color@1400d000 {
+		compatible = "mediatek,mt6755-disp-color", "mediatek,mt8173-disp-color";
+		reg = <0x0 0x1400d000 0x0 0x1000>;
+		interrupts = <GIC_SPI 189 IRQ_TYPE_LEVEL_LOW>;
+		clocks = <&disp_clk>;
+	};
+
+	ccorr0: ccorr@1400e000 {
+		compatible = "mediatek,mt6755-disp-ccorr", "mediatek,mt8183-disp-ccorr";
+		reg = <0x0 0x1400e000 0x0 0x1000>;
+		interrupts = <GIC_SPI 190 IRQ_TYPE_LEVEL_LOW>;
+		clocks = <&disp_clk>;
+	};
+
+	aal0: aal@1400f000 {
+		compatible = "mediatek,mt6755-disp-aal", "mediatek,mt8173-disp-aal";
+		reg = <0x0 0x1400f000 0x0 0x1000>;
+		interrupts = <GIC_SPI 191 IRQ_TYPE_LEVEL_LOW>;
+		clocks = <&disp_clk>;
+	};
+
+	gamma0: gamma@14010000 {
+		compatible = "mediatek,mt6755-disp-gamma", "mediatek,mt8173-disp-gamma";
+		reg = <0x0 0x14010000 0x0 0x1000>;
+		interrupts = <GIC_SPI 192 IRQ_TYPE_LEVEL_LOW>;
+		clocks = <&disp_clk>;
+	};
+
+	dither0: dither@14011000 {
+		compatible = "mediatek,mt6755-disp-dither", "mediatek,mt8183-disp-dither";
+		reg = <0x0 0x14011000 0x0 0x1000>;
+		interrupts = <GIC_SPI 193 IRQ_TYPE_LEVEL_LOW>;
+		clocks = <&disp_clk>;	/* the inline init code fails without a clock */
+	};
+
+	/* from memory of the mt8173 binding: PLL clock output + phy provider, 26 MHz reference */
+	mipi_tx0: dsi-phy@10215000 {
+		compatible = "mediatek,mt6755-mipi-tx", "mediatek,mt8173-mipi-tx";
+		reg = <0x0 0x10215000 0x0 0x1000>;
+		clocks = <&mipi_ref_clk>;
+		clock-output-names = "mipi_tx0_pll";
+		#clock-cells = <0>;
+		#phy-cells = <0>;
+	};
+
+	dsi0: dsi@14012000 {
+		compatible = "mediatek,mt6755-dsi", "mediatek,mt8173-dsi";
+		reg = <0x0 0x14012000 0x0 0x1000>;
+		interrupts = <GIC_SPI 194 IRQ_TYPE_LEVEL_LOW>;
+		clocks = <&disp_clk>, <&disp_clk>, <&mipi_tx0>;
+		clock-names = "engine", "digital", "hs";
+		phys = <&mipi_tx0>;
+		phy-names = "dphy";
+		#address-cells = <1>;
+		#size-cells = <0>;
+
+		ports {
+			port {
+				dsi0_out: endpoint {
+					remote-endpoint = <&panel_in>;
+				};
+			};
+		};
+
+		/* placeholder: the r63350 panel driver is the next piece; the compatible may change */
+	panel@0 {
+		compatible = "csot,r63350-fhd";
+		reg = <0>;
+
+		/* two regulator-fixed nodes on GPIO12 (ENP) and GPIO7 (ENN), defined elsewhere */
+		vsp-supply = <&reg_lcd_vsp>;
+		vsn-supply = <&reg_lcd_vsn>;
+
+		/* LCM reset = MMSYS register 0x150; the mmsys node needs "syscon" in its compatible */
+		mediatek,lcm-reset = <&mmsys 0x150>;
+
+		/* label of your existing pwm-backlight node; delete this line if the label differs */
+		backlight = <&backlight>;
+
+		port {
+			panel_in: endpoint {
+				remote-endpoint = <&dsi0_out>;
+			};
+		};
+	};
+	};
+};
+
+/*
+ * Still to do for this file:
+ *  - PWM0 is in the path (like in LK's mutex), and the DRM component table knows "mediatek,mt8173-disp-pwm";
+ *    the existing disp-pwm node needs that string in its compatible list, if pwm-mtk-disp accepts it.
+ *    Otherwise drop DDP_COMPONENT_PWM0 from the path array.
+ *  - panel supplies (bias IC at I2C0 0x3e, ENP GPIO12, ENN GPIO7), the MMSYS 0x150 reset line, and the backlight link.
+ */
